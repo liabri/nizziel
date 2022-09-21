@@ -1,6 +1,8 @@
+mod blocking;
+
 use std::io::{ Seek, SeekFrom, Write };
 use std::path::{ Path, PathBuf };
-use std::fs::{ File, create_dir_all };
+use std::fs::{ create_dir_all, File };
 
 #[derive(Clone, Default, Debug)]
 pub struct Downloads {
@@ -31,25 +33,6 @@ impl std::fmt::Display for Error {
 }
 
 //shouldnt extract, just return the ZipArchive
-
-pub fn create_file(path: &Path, read: bool, write: bool) -> std::io::Result<File> {
-    let mut file = std::fs::OpenOptions::new()
-        .read(read)
-        .write(write)
-        .open(path);
-
-    if let Err(_) = file {
-        create_dir_all(&path.parent().unwrap()).unwrap(); //handle non-existence of parent()
-
-        file = std::fs::OpenOptions::new()
-            .read(read)
-            .write(write)
-            .create(true)
-            .open(path);
-    }
-
-    Ok(file.unwrap())
-}
 
 use futures::StreamExt;
 
@@ -118,30 +101,21 @@ pub async fn unzip(bytes: &[u8], path: &Path) {
     zip.extract(path).unwrap();
 }
 
-pub mod blocking {
-    use crate::{ create_file, Error };
-    use std::io::{ Seek, SeekFrom, Write };
-    use std::fs::{ File, create_dir_all };
-    use std::path::{ Path, PathBuf };
+pub fn create_file(path: &Path, read: bool, write: bool) -> std::io::Result<File> {
+    let mut file = std::fs::OpenOptions::new()
+        .read(read)
+        .write(write)
+        .open(path);
 
-    pub fn download(url: &str, path: &Path, dezip: bool) -> Result<Vec<u8>, Error> {
-        let mut file = create_file(&path, true, true).unwrap();
-        let resp = reqwest::blocking::get(url).unwrap();
-        let bytes = resp.bytes().unwrap();
-        file.write_all(&bytes).unwrap();
+    if let Err(_) = file {
+        create_dir_all(&path.parent().unwrap()).unwrap(); //handle non-existence of parent()
 
-        if dezip {
-            unzip(&bytes, path).unwrap();
-        }
-
-        Ok(bytes.to_vec())
+        file = std::fs::OpenOptions::new()
+            .read(read)
+            .write(write)
+            .create(true)
+            .open(path);
     }
 
-    fn unzip(bytes: &[u8], path: &Path) -> Result<(), Error> {
-        let reader = std::io::Cursor::new(bytes);
-        let mut zip = zip::ZipArchive::new(reader).unwrap();
-        let path = format!("{}/", path.to_str().unwrap());
-        zip.extract(path).unwrap();
-        Ok(())
-    }
+    Ok(file.unwrap())
 }
