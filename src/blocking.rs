@@ -3,13 +3,13 @@ use std::path::Path;
 use std::io::Write;
 
 pub fn download(url: &str, path: &Path, dezip: bool) -> Result<Vec<u8>, Error> {
-    let mut file = create_file(&path, true, true).unwrap();
-    let resp = reqwest::blocking::get(url).unwrap();
-    let bytes = resp.bytes().unwrap();
-    file.write_all(&bytes).unwrap();
+    let mut file = create_file(&path, true, true)?;
+    let resp = reqwest::blocking::get(url)?;
+    let bytes = resp.bytes()?;
+    file.write_all(&bytes)?;
 
     if dezip {
-        unzip(&bytes, path).unwrap();
+        unzip(&bytes, path)?;
     }
 
     Ok(bytes.to_vec())
@@ -17,8 +17,8 @@ pub fn download(url: &str, path: &Path, dezip: bool) -> Result<Vec<u8>, Error> {
 
 fn unzip(bytes: &[u8], path: &Path) -> Result<(), Error> {
     let reader = std::io::Cursor::new(bytes);
-    let mut zip = zip::ZipArchive::new(reader).unwrap();
+    let mut zip = zip::ZipArchive::new(reader)?;
     let path = format!("{}/", path.to_str().unwrap());
-    zip.extract(path).unwrap();
+    zip.extract(path)?;
     Ok(())
 }

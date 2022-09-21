@@ -1,8 +1,12 @@
 mod blocking;
 
+mod error;
+use error::Error;
+
 use std::io::{ Seek, SeekFrom, Write };
 use std::path::{ Path, PathBuf };
 use std::fs::{ create_dir_all, File };
+use futures::StreamExt;
 
 #[derive(Clone, Default, Debug)]
 pub struct Downloads {
@@ -10,31 +14,12 @@ pub struct Downloads {
     pub retries: u8,
 }
 
-impl std::error::Error for Error {}
-
 #[derive(Clone, Default, Debug)]
 pub struct Download {
     pub url: String,
     pub path: PathBuf,
     pub unzip: bool,
 }
-
-#[derive(Debug)]
-pub enum Error {
-    Temp
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &*self {
-            Temp => f.write_str("temp")
-        }
-    }
-}
-
-//shouldnt extract, just return the ZipArchive
-
-use futures::StreamExt;
 
 pub async fn download(dls: Downloads) -> Result<(), Error> {
     let client = reqwest::Client::new();
@@ -101,6 +86,7 @@ pub async fn unzip(bytes: &[u8], path: &Path) {
     zip.extract(path).unwrap();
 }
 
+//shouldnt extract, just return the ZipArchive
 pub fn create_file(path: &Path, read: bool, write: bool) -> std::io::Result<File> {
     let mut file = std::fs::OpenOptions::new()
         .read(read)
